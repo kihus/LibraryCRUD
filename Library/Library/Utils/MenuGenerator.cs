@@ -23,7 +23,7 @@ internal class MenuGenerator
                 Console.ResetColor();
             }
 
-            Console.WriteLine("\nChose a correctly option:");
+            Console.WriteLine("\nChoose a correctly option:");
             Console.Write("-> ");
 
             if(!int.TryParse(Console.ReadLine(), out var option) 
