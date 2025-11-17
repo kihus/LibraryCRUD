@@ -21,6 +21,6 @@ internal class Book(
 
     public override string ToString()
     {
-        return $"Title: {Title}\nAuthor id: {AuthorId}\nYear: {Year}";
+        return $"Id: {Id}\nTitle: {Title}\nAuthor id: {AuthorId}\nYear: {Year}";
     }
 }
