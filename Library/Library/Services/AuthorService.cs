@@ -1,136 +1,223 @@
 ﻿using Library.Entities;
 using MongoDB.Driver;
+using System.Net;
 using System.Threading.Tasks;
 
 namespace Library.Services;
 internal class AuthorService
 {
-    public void CreateAuthor(IMongoCollection<Author> authorCollection)
-    {
-        Console.Clear();
-        Console.Write("Name: ");
-        var name = Console.ReadLine() ?? "";
-        if (name.Length < 3)
-        {
-            Console.WriteLine("Invalid name.");
-            return;
-        }
+	public void CreateAuthor(IMongoCollection<Author> authorCollection)
+	{
+		Console.Clear();
+		Console.Write("Name: ");
+		var name = Console.ReadLine() ?? "";
+		if (name.Length < 3)
+		{
+			Console.WriteLine("Invalid name.");
+			return;
+		}
 
-        Console.Write("Country: ");
-        var country = Console.ReadLine() ?? "";
+		Console.Write("Country: ");
+		var country = Console.ReadLine() ?? "";
+		try
+		{
+			authorCollection.InsertOne(new Author(name, country));
+		}
+		catch (MongoClientException ex)
+		{
+			Console.WriteLine("Client error: " + ex.Message);
+		}
+		catch (MongoException ex)
+		{
+			Console.WriteLine("Error: " + ex.Message);
+		}
+		finally
+		{
+			Console.WriteLine("\nPress ENTER to continue...");
+			Console.ReadKey();
+		}
+	}
 
-        authorCollection.InsertOne(new Author(name, country));
+	public async void GetAuthorList(IMongoCollection<Author> authorCollection)
+	{
+		Console.Clear();
+		try
+		{
+			if (!await authorCollection.FindAsync(x => true).Result.AnyAsync())
+			{
+				Console.ForegroundColor = ConsoleColor.Red;
+				Console.WriteLine("Don't have authors");
+				Console.ResetColor();
 
-        Console.ForegroundColor = ConsoleColor.Green;
-        Console.WriteLine("Succeful!");
-        Console.ResetColor();
+				return;
+			}
 
-        Console.WriteLine("\nPress ENTER to continue...");
-        Console.ReadKey();
-    }
+			var authors = await authorCollection.FindAsync(x => true).Result.ToListAsync();
 
-    public async void GetAuthorList(IMongoCollection<Author> authorCollection)
-    {
-        Console.Clear();
+			foreach (var author in authors.OrderBy(x => x.Name))
+				Console.WriteLine($"{author}\n");
+		}
+		catch (MongoClientException ex)
+		{
+			Console.WriteLine("Client error: " + ex.Message);
+		}
+		catch (MongoException ex)
+		{
+			Console.WriteLine("Error: " + ex.Message);
+		}
+		finally
+		{
+			Console.WriteLine("Press ENTER to continue...");
+			Console.ReadKey();
+		}
+	}
 
-        if (!authorCollection.Find(x => true).Any())
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine("Don't have authors");
-            Console.ResetColor();
-
-            Console.WriteLine("\nPress ENTER to continue...");
-            Console.ReadKey();
-            return;
-        }
+	public async Task UpdateAuthor(IMongoCollection<Author> authorCollection)
+	{
+		Console.Clear();
+		Console.Write("The author's id will be changed: ");
+		var id = Console.ReadLine();
 
 
-        var authors = await authorCollection.FindAsync(x => true).Result.ToListAsync();
-        
-        foreach(var author in authors.OrderBy(x => x.Name))
-            Console.WriteLine($"{author}\n");
 
-        Console.WriteLine("Press ENTER to continue...");
-        Console.ReadKey();
-    }
+		try
+		{
 
-    public async Task UpdateAuthor(IMongoCollection<Author> authorCollection)
-    {
-        Console.Clear();
-        Console.Write("The author's id will be changed: ");
-        var id = Console.ReadLine();
 
-        var author = await authorCollection.FindAsync(x => x.Id == id).Result.FirstOrDefaultAsync();
+			var author = await authorCollection.FindAsync(x => x.Id == id).Result.FirstOrDefaultAsync();
 
-        if (author == null)
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine("Ops... Author doesn't exists!");
-            Console.ResetColor();
-            return;
-        }
+			Console.WriteLine(author);
 
-        Console.WriteLine(author);
+			Console.ForegroundColor = ConsoleColor.Yellow;
+			Console.WriteLine("\nIf you don't want to change, just press enter!");
+			Console.ResetColor();
 
-        Console.WriteLine("\nIf you don't want to change, just press enter!");
-        Console.Write("Name: ");
-        var name = Console.ReadLine() ?? "";
+			Console.Write("Name: ");
 
-        if (name == "")
-            name = authorCollection.Find(x => x.Id == id).FirstOrDefault().Name;
+			var name = Console.ReadLine() ?? "";
 
-        if (name.Length < 3)
-        {
-            Console.WriteLine("Invalid name.");
-            return;
-        }
+			if (name == "")
+				name = author.Name;
 
-        Console.Write("Country: ");
-        var country = Console.ReadLine() ?? "";
+			if (name.Length < 3)
+			{
+				Console.WriteLine("Invalid name.");
 
-        if (country == "")
-            country = authorCollection.Find(x => x.Id == id).FirstOrDefault().Country;
+				Console.WriteLine("\nPress ENTER to continue...");
+				Console.ReadKey();
+				return;
+			}
 
-        if (country.Length < 3)
-        {
-            Console.WriteLine("Invalid name.");
-            return;
-        }
+			Console.Write("Country: ");
+			var country = Console.ReadLine() ?? "";
 
-        var authorUpdate = Builders<Author>
-                            .Update
-                            .Set(x => x.Name, name)
-                            .Set(x => x.Country, country)
-                            .Set(x => x.UpdatedAt, DateTime.UtcNow);
+			if (country == "")
+				country = author.Country;
 
-        authorCollection.UpdateOne(x => x.Id == id, authorUpdate);
+			if (country.Length < 3)
+			{
+				Console.WriteLine("Invalid name.");
 
-        Console.ForegroundColor = ConsoleColor.Green;
-        Console.WriteLine("Succesful!");
-        Console.ResetColor();
-    }
+				Console.WriteLine("\nPress ENTER to continue...");
+				Console.ReadKey();
+				return;
+			}
 
-    public void DeleteAuthor(IMongoCollection<Author> authorCollection)
-    {
-        Console.Clear();
-        Console.Write("Digit author's id will be deleted: ");
-        var id = Console.ReadLine() ?? "";
+			var authorUpdate = Builders<Author>
+								.Update
+								.Set(x => x.Name, name)
+								.Set(x => x.Country, country)
+								.Set(x => x.UpdatedAt, DateTime.UtcNow);
 
-        if (!authorCollection.Find(x => x.Id == id).Any())
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine("Don't have authors");
-            Console.ResetColor();
-            return;
-        }
+			authorCollection.UpdateOne(x => x.Id == id, authorUpdate);
+		}
+		catch (MongoClientException ex)
+		{
+			Console.WriteLine("Client error: " + ex.Message);
+		}
+		catch (MongoException ex)
+		{
+			Console.WriteLine("Error: " + ex.Message);
+		}
 
-        authorCollection.DeleteOne(x => x.Id == id);
+		Console.ForegroundColor = ConsoleColor.Green;
+		Console.WriteLine("Succesful!");
+		Console.ResetColor();
 
-        Console.ForegroundColor = ConsoleColor.Green;
-        Console.WriteLine("Succesful!");
-        Console.ResetColor();
+		Console.WriteLine("\nPress ENTER to continue...");
+		Console.ReadKey();
+	}
 
-        Console.WriteLine("\nPress ENTER to continue...");
-        Console.ReadKey();
-    }
+	public async void DeleteAuthor(IMongoCollection<Author> authorCollection)
+	{
+		Console.Clear();
+		Console.Write("Digit author's id will be deleted: ");
+		var id = Console.ReadLine() ?? "";
+
+		try
+		{
+			var author = VerifyAuthor(id, authorCollection);
+
+			if (author == null)
+			{
+				Console.ForegroundColor = ConsoleColor.Red;
+				Console.WriteLine("Ops... Author dont't exists");
+				Console.ResetColor();
+
+				Console.WriteLine("\nPress ENTER to continue...");
+				Console.ReadKey();
+
+				return;
+			}
+
+			authorCollection.DeleteOne(x => x.Id == id);
+		}
+		catch (MongoClientException ex)
+		{
+			Console.WriteLine("Client error: " + ex.Message);
+		}
+		catch (MongoException ex)
+		{
+			Console.WriteLine("Error: " + ex.Message);
+		}
+
+		Console.ForegroundColor = ConsoleColor.Green;
+		Console.WriteLine("Succesful!");
+		Console.ResetColor();
+
+		Console.WriteLine("\nPress ENTER to continue...");
+		Console.ReadKey();
+	}
+
+	private async Task<Author> VerifyAuthor(string id, IMongoCollection<Author> authorCollection)
+	{
+		if (id.Length < 24 || id.Length > 24)
+		{
+			return null;
+		}
+
+		try
+		{
+			if (!await authorCollection.FindAsync(x => true).Result.AnyAsync())
+			{
+				return null;
+			}
+			var author = await authorCollection.FindAsync(x => x.Id == id).Result.FirstOrDefaultAsync();
+
+			if (author != null)
+			{
+				return author;
+			}
+		}
+		catch (MongoClientException ex)
+		{
+			Console.WriteLine("Client error: " + ex.Message);
+		}
+		catch (MongoException ex)
+		{
+			Console.WriteLine("Error: " + ex.Message);
+		}
+
+		return null;
+	}
 }
