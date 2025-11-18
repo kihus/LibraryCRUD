@@ -4,17 +4,32 @@ using Library.Services;
 using Library.Utils;
 using Microsoft.Extensions.Configuration;
 using MongoDB.Driver;
-using System.ComponentModel.Design;
 
-var builder = new ConfigurationBuilder();
-builder.SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
-IConfiguration configuration = builder.Build();
-string? connectionString = configuration.GetConnectionString("Library");
+try
+{
+	var builder = new ConfigurationBuilder();
+	builder.SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+	IConfiguration configuration = builder.Build();
+	string? connectionString = configuration.GetConnectionString("Library");
 
-var client = new MongoClient(connectionString);
-var database = client.GetDatabase("Library");
-var authorCollection = database.GetCollection<Author>("Authors");
-var bookCollection = database.GetCollection<Book>("Books");
+	var client = new MongoClient(connectionString);
+	var database = client.GetDatabase("Library");
+	var authorCollection = database.GetCollection<Author>("Authors");
+	var bookCollection = database.GetCollection<Book>("Books");
+
+}
+catch (MongoConnectionException ex)
+{
+	Console.WriteLine("Connection error: " + ex.Message);
+}
+catch (MongoClientException ex)
+{
+	Console.WriteLine("Client error: " + ex.Message);
+}
+catch (MongoException ex)
+{
+	Console.WriteLine("Error: " + ex.Message);
+}
 
 var authorService = new AuthorService();
 var bookService = new BookService();
