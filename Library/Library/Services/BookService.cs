@@ -12,7 +12,7 @@ internal class BookService
 		Console.Write("Title: ");
 		var title = Console.ReadLine() ?? "";
 
-		if (title == null)
+		if (title is "")
 		{
 			Console.WriteLine("Ops... Title cannot be null");
 			return;
@@ -21,21 +21,10 @@ internal class BookService
 		Console.Write("Author id: ");
 		var authorId = Console.ReadLine() ?? "";
 
-		if (authorId.Length < 24 || authorId.Length > 24)
-		{
-			Console.ForegroundColor = ConsoleColor.Red;
-			Console.WriteLine("Ops... Author id is incorrect");
-			Console.ResetColor();
-
-			Console.WriteLine("\nPress ENTER to continue...");
-			Console.ReadKey();
-
-			return;
-		}
-
 		try
 		{
-			if (!await authorCollection.FindAsync(x => x.Id == authorId).Result.AnyAsync())
+			var author = VerifyAuthor(authorId, authorCollection);
+			if (author is null)
 			{
 				Console.ForegroundColor = ConsoleColor.Red;
 				Console.WriteLine("Ops... Author id not found");
@@ -119,7 +108,7 @@ internal class BookService
 
 		try
 		{
-			var book = await bookCollection.FindAsync(x => x.Id == id).Result.FirstOrDefaultAsync();
+			var book = VerifyBook(id, bookCollection);
 
 			if (book == null)
 			{
@@ -131,22 +120,25 @@ internal class BookService
 
 			Console.WriteLine(book);
 
+			Console.ForegroundColor = ConsoleColor.Yellow;
 			Console.WriteLine("\nIf you don't want to change, just press enter!");
+			Console.ResetColor();
+
 			Console.Write("Title: ");
 			var title = Console.ReadLine() ?? "";
 
-			if (title == "")
-				title = book.Title;
+			if (title is "")
+				title = book.Result.Title;
 
 			Console.Write("Author id: ");
 			var authorId = Console.ReadLine() ?? "";
 
-			if (authorId == "")
-				authorId = book.AuthorId;
+			if (authorId is "")
+				authorId = book.Result.AuthorId;
 
 			var author = VerifyAuthor(authorId, authorCollection);
 
-			if (author == null)
+			if (author is null)
 			{
 				Console.ForegroundColor = ConsoleColor.Red;
 				Console.WriteLine("Ops... Author doesn't exists!");
@@ -154,13 +146,11 @@ internal class BookService
 				return;
 			}
 
-			authorId = author.Id.ToString();
-
 			Console.Write("Year: ");
 			var years = Console.ReadLine() ?? "";
 
-			if (years == "")
-				years = book.Year.ToString();
+			if (years is "")
+				years = book.Result.Year.ToString();
 
 			if (!int.TryParse(years, out var year) && (year < 0 || year > DateTime.Now.Year))
 			{
@@ -174,7 +164,7 @@ internal class BookService
 			var bookUpdate = Builders<Book>
 								.Update
 								.Set(x => x.Title, title)
-								.Set(x => x.AuthorId, authorId)
+								.Set(x => x.AuthorId, author.Id.ToString())
 								.Set(x => x.Year, year)
 								.Set(x => x.UpdatedAt, DateTime.UtcNow);
 
@@ -207,7 +197,9 @@ internal class BookService
 
 		try
 		{
-			if (!await bookCollection.FindAsync(x => x.Id == id).Result.AnyAsync())
+			var book = VerifyBook(id, bookCollection);
+
+			if (book is null)
 			{
 				Console.ForegroundColor = ConsoleColor.Red;
 				Console.WriteLine("This book doesn't exists!");
@@ -215,11 +207,11 @@ internal class BookService
 				return;
 			}
 
-			var book = await bookCollection.FindAsync(x => x.Id == id).Result.FirstOrDefaultAsync();
-
 			Console.WriteLine(book);
 
-			Console.Write("Are you sure you want to delete this? (y/n) ");
+			Console.ForegroundColor = ConsoleColor.Yellow;
+			Console.Write("\nAre you sure you want to delete this? (y/n) ");
+			Console.ResetColor();
 
 			if ((Console.ReadLine().ToLower() ?? "") != "y")
 			{
@@ -233,6 +225,10 @@ internal class BookService
 			}
 
 			bookCollection.DeleteOne(x => x.Id == id);
+
+			Console.ForegroundColor = ConsoleColor.Green;
+			Console.WriteLine("Succesful!");
+			Console.ResetColor();
 		}
 		catch(MongoClientException ex)
 		{
@@ -242,13 +238,11 @@ internal class BookService
 		{
 			Console.WriteLine("Error: " + ex.Message);
 		}
-
-		Console.ForegroundColor = ConsoleColor.Green;
-		Console.WriteLine("Succesful!");
-		Console.ResetColor();
-
-		Console.WriteLine("\nPress ENTER to continue...");
-		Console.ReadKey();
+		finally
+		{
+			Console.WriteLine("\nPress ENTER to continue...");
+			Console.ReadKey();
+		}
 	}
 
 	private async Task<Author> VerifyAuthor(string id, IMongoCollection<Author> authorCollection)
@@ -269,6 +263,37 @@ internal class BookService
 			if (author != null)
 			{
 				return author;
+			}
+		}
+		catch (MongoClientException ex)
+		{
+			Console.WriteLine("Client error: " + ex.Message);
+		}
+		catch (MongoException ex)
+		{
+			Console.WriteLine("Error: " + ex.Message);
+		}
+
+		return null;
+	}
+	private async Task<Book> VerifyBook(string id, IMongoCollection<Book> bookCollection)
+	{
+		if (id.Length < 24 || id.Length > 24)
+		{
+			return null;
+		}
+
+		try
+		{
+			if (!await bookCollection.FindAsync(x => true).Result.AnyAsync())
+			{
+				return null;
+			}
+			var book = await bookCollection.FindAsync(x => x.Id == id).Result.FirstOrDefaultAsync();
+
+			if (book != null)
+			{
+				return book;
 			}
 		}
 		catch (MongoClientException ex)
