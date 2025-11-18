@@ -74,7 +74,7 @@ internal class BookService
 			if (!await bookCollection.FindAsync(x => true).Result.AnyAsync())
 			{
 				Console.ForegroundColor = ConsoleColor.Red;
-				Console.WriteLine("Ops... Book not found");
+				Console.WriteLine("Ops... Don't have books!");
 				Console.ResetColor();
 
 				return;
@@ -210,7 +210,7 @@ internal class BookService
 			Console.WriteLine(book);
 
 			Console.ForegroundColor = ConsoleColor.Yellow;
-			Console.Write("\nAre you sure you want to delete this? (y/n) ");
+			Console.Write("\nAre you sure you want to delete this book? (y/n) ");
 			Console.ResetColor();
 
 			if ((Console.ReadLine().ToLower() ?? "") != "y")
@@ -218,9 +218,6 @@ internal class BookService
 				Console.ForegroundColor = ConsoleColor.Red;
 				Console.WriteLine("Operation canceled!");
 				Console.ResetColor();
-
-				Console.WriteLine("\nPress ENTER to continue...");
-				Console.ReadKey();
 				return;
 			}
 

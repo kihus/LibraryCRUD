@@ -19,6 +19,7 @@ internal class AuthorService
 
 		Console.Write("Country: ");
 		var country = Console.ReadLine() ?? "";
+
 		try
 		{
 			authorCollection.InsertOne(new Author(name, country));
@@ -46,7 +47,7 @@ internal class AuthorService
 			if (!await authorCollection.FindAsync(x => true).Result.AnyAsync())
 			{
 				Console.ForegroundColor = ConsoleColor.Red;
-				Console.WriteLine("Don't have authors");
+				Console.WriteLine("Ops... Don't have authors!");
 				Console.ResetColor();
 
 				return;
@@ -78,12 +79,8 @@ internal class AuthorService
 		Console.Write("The author's id will be changed: ");
 		var id = Console.ReadLine();
 
-
-
 		try
 		{
-
-
 			var author = await authorCollection.FindAsync(x => x.Id == id).Result.FirstOrDefaultAsync();
 
 			Console.WriteLine(author);
@@ -96,30 +93,26 @@ internal class AuthorService
 
 			var name = Console.ReadLine() ?? "";
 
-			if (name == "")
+			if (name is "")
 				name = author.Name;
 
 			if (name.Length < 3)
 			{
 				Console.WriteLine("Invalid name.");
 
-				Console.WriteLine("\nPress ENTER to continue...");
-				Console.ReadKey();
 				return;
 			}
 
 			Console.Write("Country: ");
 			var country = Console.ReadLine() ?? "";
 
-			if (country == "")
+			if (country is "")
 				country = author.Country;
 
 			if (country.Length < 3)
 			{
 				Console.WriteLine("Invalid name.");
 
-				Console.WriteLine("\nPress ENTER to continue...");
-				Console.ReadKey();
 				return;
 			}
 
@@ -130,6 +123,10 @@ internal class AuthorService
 								.Set(x => x.UpdatedAt, DateTime.UtcNow);
 
 			authorCollection.UpdateOne(x => x.Id == id, authorUpdate);
+
+			Console.ForegroundColor = ConsoleColor.Green;
+			Console.WriteLine("Succesful!");
+			Console.ResetColor();
 		}
 		catch (MongoClientException ex)
 		{
@@ -139,13 +136,11 @@ internal class AuthorService
 		{
 			Console.WriteLine("Error: " + ex.Message);
 		}
-
-		Console.ForegroundColor = ConsoleColor.Green;
-		Console.WriteLine("Succesful!");
-		Console.ResetColor();
-
-		Console.WriteLine("\nPress ENTER to continue...");
-		Console.ReadKey();
+		finally
+		{
+			Console.WriteLine("\nPress ENTER to continue...");
+			Console.ReadKey();
+		}
 	}
 
 	public async void DeleteAuthor(IMongoCollection<Author> authorCollection)
@@ -158,19 +153,34 @@ internal class AuthorService
 		{
 			var author = VerifyAuthor(id, authorCollection);
 
-			if (author == null)
+			if (author is null)
 			{
 				Console.ForegroundColor = ConsoleColor.Red;
 				Console.WriteLine("Ops... Author dont't exists");
 				Console.ResetColor();
 
-				Console.WriteLine("\nPress ENTER to continue...");
-				Console.ReadKey();
+				return;
+			}
 
+			Console.WriteLine(author);
+
+			Console.ForegroundColor = ConsoleColor.Yellow;
+			Console.Write("\nAre you sure you want to delete this author? (y/n) ");
+			Console.ResetColor();
+
+			if ((Console.ReadLine().ToLower() ?? "") != "y")
+			{
+				Console.ForegroundColor = ConsoleColor.Red;
+				Console.WriteLine("Operation canceled!");
+				Console.ResetColor();
 				return;
 			}
 
 			authorCollection.DeleteOne(x => x.Id == id);
+
+			Console.ForegroundColor = ConsoleColor.Green;
+			Console.WriteLine("Succesful!");
+			Console.ResetColor();
 		}
 		catch (MongoClientException ex)
 		{
@@ -180,13 +190,12 @@ internal class AuthorService
 		{
 			Console.WriteLine("Error: " + ex.Message);
 		}
+		finally
+		{
 
-		Console.ForegroundColor = ConsoleColor.Green;
-		Console.WriteLine("Succesful!");
-		Console.ResetColor();
-
-		Console.WriteLine("\nPress ENTER to continue...");
-		Console.ReadKey();
+			Console.WriteLine("\nPress ENTER to continue...");
+			Console.ReadKey();
+		}
 	}
 
 	private async Task<Author> VerifyAuthor(string id, IMongoCollection<Author> authorCollection)
@@ -204,7 +213,7 @@ internal class AuthorService
 			}
 			var author = await authorCollection.FindAsync(x => x.Id == id).Result.FirstOrDefaultAsync();
 
-			if (author != null)
+			if (author is not null)
 			{
 				return author;
 			}
